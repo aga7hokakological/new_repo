@@ -24,18 +24,19 @@ pub mod token_program {
 
     pub fn add_liquidity(
         ctx: Context<LiquidityOperations>,
-        token0_amount: u64,
-        token1_amount: u64
+        token0_amt: u64,
+        token1_amt: u64
     ) -> Result<()> {
         let dex_account = &mut ctx.accounts.dex;
 
-        let liquidity = (token0_amount.checked_mul(token1_amount)).unwrap();
+        let liquidity = (token0_amt.checked_mul(token1_amt)).unwrap();
 
+        // let liquidity = 10000;
         let old_k = dex_account.k;
 
         dex_account.lp_amount = dex_account.lp_amount.checked_add(liquidity).unwrap();
-        dex_account.token0_amount = dex_account.token0_amount.checked_add(token0_amount).unwrap();
-        dex_account.token1_amount = dex_account.token1_amount.checked_add(token1_amount).unwrap();
+        dex_account.token0_amount = dex_account.token0_amount.checked_add(token0_amt).unwrap();
+        dex_account.token1_amount = dex_account.token1_amount.checked_add(token1_amt).unwrap();
         dex_account.k = (
             dex_account.token0_amount.
             checked_mul(dex_account.token1_amount)
@@ -45,34 +46,41 @@ pub mod token_program {
 
 
         // Transfer token0 from user ATA to dex ATA
-        let cpi_accounts_token0 = Transfer {
-            from: ctx.accounts.user_token0.to_account_info(),
-            to: ctx.accounts.account_token0.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-        };
-        let cpi_program_token0 = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx_token0 = CpiContext::new(cpi_program_token0, cpi_accounts_token0);
-        token::transfer(cpi_ctx_token0, token0_amount)?;
+        token::transfer(CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.user_token0.to_account_info(),
+                to: ctx.accounts.user_token0.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
+            }
+        ), token0_amt)?;
 
-        // Transfer token1 from user ATA to dex ATA
-        let cpi_accounts_token1 = Transfer {
-            from: ctx.accounts.user_token1.to_account_info(),
-            to: ctx.accounts.account_token1.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-        };
-        let cpi_program_token1 = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx_token1 = CpiContext::new(cpi_program_token1, cpi_accounts_token1);
-        token::transfer(cpi_ctx_token1, token1_amount)?;
+        // // Transfer token1 from user ATA to dex ATA
+        token::transfer(CpiContext::new(
+            ctx.accounts.token_program.to_account_info(),
+            Transfer {
+                from: ctx.accounts.user_token1.to_account_info(),
+                to: ctx.accounts.user_token1.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
+            }
+        ), token1_amt)?;
 
         // Mint LP tokens to user ATA
-        let cpi_accounts = MintTo {
-            mint: ctx.accounts.mint_lp.to_account_info(),
-            to: ctx.accounts.user.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
-        };
-        let cpi_program = ctx.accounts.token_program.to_account_info();
-        let cpi_ctx = CpiContext::new(cpi_program, cpi_accounts);
-        token::mint_to(cpi_ctx, liquidity)?;
+        // let mint_ctx = CpiContext::new(
+        //     ctx.accounts.token_program.to_account_info(),
+        //     MintTo {
+        //         mint: ctx.accounts.mint_lp.to_account_info(),
+        //         to: ctx.accounts.user_lp.to_account_info(),
+        //         authority: ctx.accounts.authority.to_account_info(),
+        //     }
+        // );
+        // let bump = *ctx.bumps.get("dex").unwrap();
+        // let pool_key = ctx.accounts.dex.key();
+        // let pda_sign = &[b"authority", pool_key.as_ref(), /*&[bump]*/];
+        // token::mint_to(
+        //     mint_ctx.with_signer(&[pda_sign]),
+        //     liquidity
+        // )?;
 
         Ok(())
     }
@@ -100,7 +108,7 @@ pub mod token_program {
 
         let cpi_accounts_lp = Burn {
             mint: ctx.accounts.token_program.to_account_info(),
-            from: ctx.accounts.user.to_account_info(),
+            from: ctx.accounts.user_lp.to_account_info(),
             authority: ctx.accounts.authority.to_account_info(),
         };
         let cpi_program_lp = ctx.accounts.token_program.to_account_info();
@@ -109,9 +117,9 @@ pub mod token_program {
 
         // Transfer token0 from user ATA to dex ATA
         let cpi_accounts_token0 = Transfer {
-            from: ctx.accounts.account_token0.to_account_info(),
-            to: ctx.accounts.user.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
+            from: ctx.accounts.acc_token0.to_account_info(),
+            to: ctx.accounts.user_token0.to_account_info(),
+            authority: ctx.accounts.user.to_account_info(),
         };
         let cpi_program_token0 = ctx.accounts.token_program.to_account_info();
         let cpi_ctx_token0 = CpiContext::new(cpi_program_token0, cpi_accounts_token0);
@@ -119,9 +127,9 @@ pub mod token_program {
 
         // Transfer token1 from user ATA to dex ATA
         let cpi_accounts_token1 = Transfer {
-            from: ctx.accounts.account_token1.to_account_info(),
-            to: ctx.accounts.user.to_account_info(),
-            authority: ctx.accounts.authority.to_account_info(),
+            from: ctx.accounts.acc_token1.to_account_info(),
+            to: ctx.accounts.user_token1.to_account_info(),
+            authority: ctx.accounts.user.to_account_info(),
         };
         let cpi_program_token1 = ctx.accounts.token_program.to_account_info();
         let cpi_ctx_token1 = CpiContext::new(cpi_program_token1, cpi_accounts_token1);
@@ -153,9 +161,9 @@ pub mod token_program {
 
             // Transfer token0 from user ATA to dex ATA
             let cpi_accounts_token0 = Transfer {
-                from: ctx.accounts.user.to_account_info(),
-                to: ctx.accounts.account_token0.to_account_info(),
-                authority: ctx.accounts.authority.to_account_info(),
+                from: ctx.accounts.user_token0.to_account_info(),
+                to: ctx.accounts.acc_token0.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
             };
             let cpi_program_token0 = ctx.accounts.token_program.to_account_info();
             let cpi_ctx_token0 = CpiContext::new(cpi_program_token0, cpi_accounts_token0);
@@ -169,9 +177,9 @@ pub mod token_program {
 
             // Transfer token1 from user ATA to dex ATA
             let cpi_accounts_token1 = Transfer {
-                from: ctx.accounts.user.to_account_info(),
-                to: ctx.accounts.account_token1.to_account_info(),
-                authority: ctx.accounts.authority.to_account_info(),
+                from: ctx.accounts.user_token1.to_account_info(),
+                to: ctx.accounts.acc_token1.to_account_info(),
+                authority: ctx.accounts.user.to_account_info(),
             };
             let cpi_program_token1 = ctx.accounts.token_program.to_account_info();
             let cpi_ctx_token1 = CpiContext::new(cpi_program_token1, cpi_accounts_token1);
@@ -194,25 +202,26 @@ pub mod token_program {
 
 #[derive(Accounts)]
 pub struct InitializeDex<'info> {
+    /// CHECK: We are not reading writing from user acc
+    #[account(seeds=[b"authority", dex.key().as_ref()], bump)]
+    pub authority: UncheckedAccount<'info>,
     #[account(mut)]
-    pub authority: Signer<'info>,
+    pub payer: Signer<'info>,
     #[account(
         init,
-        payer = authority,
-        space = 1024,
-        seeds = [b"dex".as_ref(), authority.key().as_ref()],
+        payer = payer,
+        space = 500,
+        seeds = [b"dex".as_ref(), mint_token0.key().as_ref(), mint_token1.key().as_ref()],
         bump
     )]
-    pub dex: Account<'info, Dex>,
-    pub mint_token0: Account<'info, Mint>,
-    pub mint_token1: Account<'info, Mint>,
-    pub mint_lp: Account<'info, Mint>,
-    pub account_token0: Account<'info, TokenAccount>,
-    pub account_token1: Account<'info, TokenAccount>,
-    pub account_lp: Account<'info, TokenAccount>,
+    pub dex: Box<Account<'info, Dex>>,
+    pub mint_token0: Box<Account<'info, Mint>>,
+    pub mint_token1: Box<Account<'info, Mint>>,
+    pub mint_lp: Box<Account<'info, Mint>>,
+    pub acc_token0: Box<Account<'info, TokenAccount>>,
+    pub acc_token1: Box<Account<'info, TokenAccount>>,
+    pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    // pub token1_program: Program<'info, Token>,
-    // pub lp_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
 
@@ -224,16 +233,20 @@ pub struct Swap<'info> {
     #[account(mut)]
     pub authority: Signer<'info>,
     #[account(mut)]
-    pub dex: Account<'info, Dex>,
-    pub mint_token0: Account<'info, Mint>,
-    pub mint_token1: Account<'info, Mint>,
-    pub mint_lp: Account<'info, Mint>,
-    pub account_token0: Account<'info, TokenAccount>,
-    pub account_token1: Account<'info, TokenAccount>,
-    pub account_lp: Account<'info, TokenAccount>,
+    pub dex: Box<Account<'info, Dex>>,
+    // pub mint_token0: Box<Account<'info, Mint>>,
+    // pub mint_token1: Box<Account<'info, Mint>>,
+    // pub mint_lp: Box<Account<'info, Mint>>,
+    /// user token0 ATA
+    #[account(mut)]
+    pub user_token0: Box<Account<'info, TokenAccount>>,
+    /// user token1 ATA
+    #[account(mut)]
+    pub user_token1: Box<Account<'info, TokenAccount>>,
+    pub acc_token0: Box<Account<'info, TokenAccount>>,
+    pub acc_token1: Box<Account<'info, TokenAccount>>,
+    pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    // pub token1_program: Program<'info, Token>,
-    // pub lp_program: Program<'info, Token>,
 }
 
 #[derive(Accounts)]
@@ -244,20 +257,27 @@ pub struct LiquidityOperations<'info> {
     #[account(mut)]
     pub authority: UncheckedAccount<'info>,
     #[account(mut)]
-    pub dex: Account<'info, Dex>,
-    pub mint_token0: Account<'info, Mint>,
-    pub mint_token1: Account<'info, Mint>,
-    pub mint_lp: Account<'info, Mint>,
-    pub user_token0: Account<'info, TokenAccount>,
-    pub user_token1: Account<'info, TokenAccount>,
-    pub user_lp: Account<'info, TokenAccount>,
-    pub account_token0: Account<'info, TokenAccount>,
-    pub account_token1: Account<'info, TokenAccount>,
-    pub account_lp: Account<'info, TokenAccount>,
+    pub dex: Box<Account<'info, Dex>>,
+    // pub mint_token0: Box<Account<'info, Mint>>,
+    // pub mint_token1: Box<Account<'info, Mint>>,
+    /// lp token to be mint
+    pub mint_lp: Box<Account<'info, Mint>>,
+    /// user token0 ATA
+    #[account(mut)]
+    pub user_token0: Box<Account<'info, TokenAccount>>,
+    /// user token1 ATA
+    #[account(mut)]
+    pub user_token1: Box<Account<'info, TokenAccount>>,
+    /// user lp Token ATA
+    #[account(mut)]
+    pub user_lp: Box<Account<'info, TokenAccount>>,
+    /// dex token0 ATA
+    pub acc_token0: Box<Account<'info, TokenAccount>>,
+    /// dex token1 ATA
+    pub acc_token1: Box<Account<'info, TokenAccount>>,
+    /// dex token lp ATA
+    pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
-    // pub token1_program: Program<'info, Token>,
-    // pub lp_program: Program<'info, Token>,
-    // pub system_program: Program<'info, System>,
 }
 
 #[account]
