@@ -163,6 +163,18 @@ describe("token-program", async () => {
       true
     )
 
+    // let token1MintToDex = await token.mintToChecked(
+    //   connection,
+    //   admin,
+    //   token1mintPubkey,
+    //   dexToken1Acc.address,
+    //   admin.publicKey,
+    //   100e9,
+    //   9
+    // )
+    // let token1AmtDex = await connection.getTokenAccountBalance(dexToken1Acc.address);
+    // console.log("AMOUNT DEX::", token1AmtDex.value.amount);
+
     console.log("passed1")
 
     const dexTx = await program.methods.initializeDex().accounts({
@@ -197,7 +209,11 @@ describe("token-program", async () => {
         tokenProgram: token.TOKEN_PROGRAM_ID,
       }).signers([admin]).rpc();
   let dexToken0Amt = await token.getAccount(connection, dexToken0Acc.address);
-  console.log("AMOUNT::", dexToken0Amt.amount.toString());
+  console.log("AMOUNT0::", dexToken0Amt.amount.toString());
+  let dexToken1Amt = await token.getAccount(connection, dexToken1Acc.address);
+  console.log("AMOUNT1::", dexToken1Amt.amount.toString());
+  let userToken1Amt = await token.getAccount(connection, adminToken1Acc);
+  console.log("USER AMOUNT1::", userToken1Amt.amount.toString());
 
   const k = (await program.account.dex.fetch(dexPDA)).k;
   console.log(k.toString())
@@ -227,5 +243,6 @@ describe("token-program", async () => {
     accLp: dexTokenLpAcc.address,
     tokenProgram: token.TOKEN_PROGRAM_ID,
   }).signers([admin]).rpc();
+  // console.log("AMOUNT1::", dexToken1Amt.amount.toString());
   });
 });

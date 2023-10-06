@@ -1,5 +1,8 @@
 use anchor_lang::prelude::*;
-use anchor_spl::token::{self, MintTo, Transfer, Token, Mint, Burn, TokenAccount};
+use anchor_spl::{
+    token,
+    token::{MintTo, Transfer, Token, Mint, Burn, TokenAccount},
+};
 
 declare_id!("5EyzFuQFafP4Mv1JPqi9EFzaEJUXCRBb5GPvF5YByuU6");
 
@@ -48,17 +51,17 @@ pub mod token_program {
         // Transfer token0 from user ATA to dex ATA
         token::transfer(CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            token::Transfer {
                 from: ctx.accounts.user_token0.to_account_info(),
                 to: ctx.accounts.user_token0.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
             }
         ), token0_amt)?;
 
-        // // Transfer token1 from user ATA to dex ATA
+        // Transfer token1 from user ATA to dex ATA
         token::transfer(CpiContext::new(
             ctx.accounts.token_program.to_account_info(),
-            Transfer {
+            token::Transfer {
                 from: ctx.accounts.user_token1.to_account_info(),
                 to: ctx.accounts.user_token1.to_account_info(),
                 authority: ctx.accounts.user.to_account_info(),
@@ -218,8 +221,11 @@ pub struct InitializeDex<'info> {
     pub mint_token0: Box<Account<'info, Mint>>,
     pub mint_token1: Box<Account<'info, Mint>>,
     pub mint_lp: Box<Account<'info, Mint>>,
+    #[account(mut)]
     pub acc_token0: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub acc_token1: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
@@ -243,8 +249,11 @@ pub struct Swap<'info> {
     /// user token1 ATA
     #[account(mut)]
     pub user_token1: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub acc_token0: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub acc_token1: Box<Account<'info, TokenAccount>>,
+    #[account(mut)]
     pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
@@ -272,10 +281,13 @@ pub struct LiquidityOperations<'info> {
     #[account(mut)]
     pub user_lp: Box<Account<'info, TokenAccount>>,
     /// dex token0 ATA
+    #[account(mut)]
     pub acc_token0: Box<Account<'info, TokenAccount>>,
     /// dex token1 ATA
+    #[account(mut)]
     pub acc_token1: Box<Account<'info, TokenAccount>>,
     /// dex token lp ATA
+    #[account(mut)]
     pub acc_lp: Account<'info, TokenAccount>,
     pub token_program: Program<'info, Token>,
 }
